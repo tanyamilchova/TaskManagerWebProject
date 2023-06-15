@@ -1,7 +1,6 @@
 package com.example.taskmanager.controller;
 
 import com.example.taskmanager.model.DTOs.ErrorDTO;
-import com.example.taskmanager.model.entities.Task;
 import com.example.taskmanager.model.exceptions.BadRequestException;
 import com.example.taskmanager.model.exceptions.NotFoundException;
 import com.example.taskmanager.model.exceptions.UnauthorizedException;
@@ -62,11 +61,11 @@ public class AbstractController {
     }
 
     protected  long loggedId(final HttpSession session){
-        return (long) session.getAttribute(Constant.LOGGED_ID);
+        return (long) session.getAttribute(Util.LOGGED_ID);
     }
 
     protected boolean validSession(final HttpSession session){
-        if(session.getAttribute(Constant.LOGGED)==null){
+        if(session.getAttribute(Util.LOGGED)==null){
             throw new UnauthorizedException("Invalid session. Login first.");
         }
         return true;

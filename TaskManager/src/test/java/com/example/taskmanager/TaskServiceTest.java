@@ -1,6 +1,7 @@
 package com.example.taskmanager;
 
-import com.example.taskmanager.controller.Constant;
+
+import com.example.taskmanager.controller.Util;
 import com.example.taskmanager.model.DTOs.TaskAddDTO;
 import com.example.taskmanager.model.DTOs.TaskInfoDTO;
 import com.example.taskmanager.model.entities.Task;
@@ -9,28 +10,30 @@ import com.example.taskmanager.model.exceptions.NotFoundException;
 import com.example.taskmanager.model.exceptions.UnauthorizedException;
 import com.example.taskmanager.model.repositories.TaskRepository;
 import com.example.taskmanager.model.repositories.UserRepository;
-import com.example.taskmanager.service.Service;
+import com.example.taskmanager.service.AbstractService;
 import com.example.taskmanager.service.TaskService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+
 import org.mockito.MockitoAnnotations;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.modelmapper.ModelMapper;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.when;
 
@@ -41,14 +44,8 @@ public class TaskServiceTest {
     private UserRepository userRepository;
     @Mock
     private TaskRepository taskRepository;
-    @Mock
-    private Service service;
     @InjectMocks
     private TaskService taskService;
-    @Mock
-    TaskRepository repository;
-    @Mock
-    private BCryptPasswordEncoder passwordEncoder;
     @Mock
     private ModelMapper mapper;
     @BeforeEach
@@ -63,8 +60,16 @@ public class TaskServiceTest {
         LocalDateTime now = LocalDateTime.now();
 
         TaskAddDTO taskAddDTO = new TaskAddDTO();
+        taskAddDTO.setTitle("Title");
+        taskAddDTO.setDescription("Descr");
+        taskAddDTO.setPriority("LOW");
+        taskAddDTO.setDateTimeCreation(LocalDateTime.now());
+        taskAddDTO.setDueDate(LocalDateTime.now().plusDays(5));
+        taskAddDTO.setStatus("ToDo");
+
         User user = new User();
         user.setId(userId);
+        user.setEnable(true);
 
         Task task = new Task();
         task.setId(taskId);
@@ -74,7 +79,12 @@ public class TaskServiceTest {
         TaskInfoDTO expected = new TaskInfoDTO();
         expected.setId(taskId);
         expected.setUserId(userId);
-        expected.setDateTimeCreation(now);
+        expected.setDateTimeCreation(taskAddDTO.getDateTimeCreation());
+        expected.setPriority(taskAddDTO.getPriority());
+        expected.setTitle(taskAddDTO.getTitle());
+        expected.setDescription(taskAddDTO.getDescription());
+        expected.setDueDate(taskAddDTO.getDueDate());
+        expected.setStatus(taskAddDTO.getStatus());
 
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
         when(mapper.map(taskAddDTO, Task.class)).thenReturn(task);
@@ -180,24 +190,19 @@ public class TaskServiceTest {
     void filterUnfinishedTasksReturnsFilteredTaskInfoDTOList() {
 
         long userId = 1;
-
+        int page = 1;
+        int size = 10;
         Task task1 = new Task();
         task1.setId(1);
-        task1.setStatus(Constant.ToDo);
+        task1.setStatus(Util.ToDo);
         task1.setUser(new User());
         task1.getUser().setId(userId);
 
         Task task2 = new Task();
         task2.setId(2);
-        task2.setStatus(Constant.IN_PROGRESS);
+        task2.setStatus(Util.IN_PROGRESS);
         task2.setUser(new User());
         task2.getUser().setId(userId);
-
-        Task task3 = new Task();
-        task3.setId(3);
-        task3.setStatus(Constant.FINISHED);
-        task3.setUser(new User());
-        task3.getUser().setId(userId);
 
         List<Task> tasks = Arrays.asList(task1, task2);
 
@@ -205,14 +210,15 @@ public class TaskServiceTest {
                 mapper.map(task1, TaskInfoDTO.class),
                 mapper.map(task2, TaskInfoDTO.class)
         );
-        when(taskRepository.findByStatus(Constant.ToDo, Constant.IN_PROGRESS, userId)).thenReturn(tasks);
+        Pageable pageable= PageRequest.of(page,size);
+        Page<Task>taskPage=new PageImpl<>(tasks,pageable,tasks.size());
+        when(taskRepository.findByStatus(Util.ToDo, Util.IN_PROGRESS, userId,pageable)).thenReturn(taskPage);
 
-        List<TaskInfoDTO> result = taskService.filterUnfinishdTasks(userId);
+        Page<TaskInfoDTO> result = taskService.filterUnfinishdTasks(userId,page,size);
 
         assertNotNull(result);
-        assertEquals(expected.size(), result.size());
         for (int i = 0; i < expected.size(); i++) {
-            assertEquals(expected.get(i), result.get(i));
+            assertEquals(expected.get(i), result.toList().get(i));
         }
     }
     @Test
@@ -240,7 +246,7 @@ public class TaskServiceTest {
         List<Task> tasks = Arrays.asList(task1, task2);
 
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
-        when(taskRepository.findByStatus(Constant.ToDo, Constant.IN_PROGRESS, userId)).thenReturn(tasks);
+        when(taskRepository.findByStatus(Util.ToDo, Util.IN_PROGRESS, userId)).thenReturn(tasks);
 
         File resultFile = taskService.getUnfinishedTasks(userId);
 
@@ -260,4 +266,6 @@ public class TaskServiceTest {
         assertEquals("2;Task 2;Description 2;"+localDateTime.plusDays(2), task2Line);
         resultFile.delete();
     }
+
+
 }

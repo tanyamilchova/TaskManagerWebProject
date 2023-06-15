@@ -10,12 +10,14 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
 @Service
-public class UserService extends com.example.taskmanager.service.Service {
+public class UserService extends AbstractService {
 
 @Autowired
 JavaMailSender mailSender;
@@ -25,6 +27,9 @@ JavaMailSender mailSender;
             throw new UnauthorizedException("Wrong credentials");
         }
         final User u = ifPresent(userRepository.findByEmail(loginDTO.getEmail()));
+        if (! u.isEnable()) {
+            throw new UnauthorizedException("Wrong credentials");
+        }
         if(passwordEncoder.matches(loginDTO.getPassword(), u.getPassword())){
             System.out.println();
             return mapper.map(u, UserWithoutPasswordDTO.class);
@@ -66,11 +71,12 @@ JavaMailSender mailSender;
         }
         final User u=ifPresent(userRepository.findById(id));
         u.setEmail(editProfilDTO.getEmail());
-        u.setEmail(editProfilDTO.getFirstName());
+        u.setFirstName(editProfilDTO.getFirstName());
         u.setLastName(editProfilDTO.getLastName());
-        return mapper.map(editProfilDTO,UserWithoutPasswordDTO.class);
+        userRepository.save(u);
+        return mapper.map(u,UserWithoutPasswordDTO.class);
     }
-
+    @Transactional
     public void delete(final UserPasswordDTO userPasswordDTO,final long id) {
         final User u=ifPresent(userRepository.findById(id));
         if(!passwordEncoder.matches(userPasswordDTO.getPassword(), u.getPassword())) {

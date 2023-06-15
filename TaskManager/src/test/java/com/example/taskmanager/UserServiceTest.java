@@ -1,6 +1,6 @@
 package com.example.taskmanager;
 
-import com.example.taskmanager.controller.Constant;
+import com.example.taskmanager.controller.Util;
 import com.example.taskmanager.model.DTOs.*;
 import com.example.taskmanager.model.entities.User;
 import com.example.taskmanager.model.exceptions.BadRequestException;
@@ -9,8 +9,6 @@ import com.example.taskmanager.model.exceptions.UnauthorizedException;
 import com.example.taskmanager.model.repositories.UserRepository;
 import com.example.taskmanager.service.EmailSenderService;
 import com.example.taskmanager.service.UserService;
-import jakarta.persistence.Column;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -20,12 +18,7 @@ import org.modelmapper.ModelMapper;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.security.core.parameters.P;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
-
-import java.time.LocalDateTime;
-import java.util.NoSuchElementException;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -51,14 +44,15 @@ public class UserServiceTest {
     public void testSuccessfulLogin1() {
 
         LoginDTO loginDTO = new LoginDTO();
-        loginDTO.setEmail(Constant.EMAIL);
-        loginDTO.setPassword(Constant.PASS);
+        loginDTO.setEmail(Util.EMAIL);
+        loginDTO.setPassword(Util.PASS);
 
         User user = new User();
-        user.setEmail(Constant.EMAIL);
-        user.setPassword(Constant.PASS);
+        user.setEmail(Util.EMAIL);
+        user.setPassword(Util.PASS);
+        user.setEnable(true);
 
-        UserWithoutPasswordDTO expected=new UserWithoutPasswordDTO(1,Constant.FIRST_NAME,Constant.LAST_NAME,Constant.EMAIL,Constant.ROLE_NAME);
+        UserWithoutPasswordDTO expected=new UserWithoutPasswordDTO(1, Util.FIRST_NAME,Util.LAST_NAME,Util.EMAIL,Util.ROLE_NAME);
 
         when(userRepository.existsByEmail(loginDTO.getEmail())).thenReturn(true);
         when(userRepository.findByEmail(loginDTO.getEmail())).thenReturn(Optional.of(user));
@@ -74,8 +68,8 @@ public class UserServiceTest {
     public void testWrongEmail() {
 
         LoginDTO loginDTO = new LoginDTO();
-        loginDTO.setEmail(Constant.EMAIL);
-        loginDTO.setPassword(Constant.PASS);
+        loginDTO.setEmail(Util.EMAIL);
+        loginDTO.setPassword(Util.PASS);
 
         when(userRepository.existsByEmail(loginDTO.getEmail())).thenReturn(false);
         assertThrows(UnauthorizedException.class, () -> userService.login(loginDTO));
@@ -85,12 +79,13 @@ public class UserServiceTest {
     public void testWrongPassword() {
 
         LoginDTO loginDTO = new LoginDTO();
-        loginDTO.setEmail(Constant.EMAIL);
+        loginDTO.setEmail(Util.EMAIL);
         loginDTO.setPassword("3456Sbb#");
 
         User user = new User();
-        user.setEmail(Constant.EMAIL);
-        user.setPassword(Constant.PASS);
+        user.setEmail(Util.EMAIL);
+        user.setPassword(Util.PASS);
+        user.setEnable(true);
 
         when(userRepository.existsByEmail(loginDTO.getEmail())).thenReturn(true);
         when(userRepository.findByEmail(loginDTO.getEmail())).thenReturn(Optional.of(user));
@@ -102,12 +97,12 @@ public class UserServiceTest {
     public void testLoginUserNotEnabled() {
 
         LoginDTO loginDTO = new LoginDTO();
-        loginDTO.setEmail(Constant.EMAIL);
-        loginDTO.setPassword(Constant.PASS);
+        loginDTO.setEmail(Util.EMAIL);
+        loginDTO.setPassword(Util.PASS);
 
         User user = new User();
-        user.setEmail(Constant.EMAIL);
-        user.setPassword(Constant.PASS);
+        user.setEmail(Util.EMAIL);
+        user.setPassword(Util.PASS);
         user.setEnable(false);
 
         when(userRepository.existsByEmail(loginDTO.getEmail())).thenReturn(true);
@@ -119,12 +114,12 @@ public class UserServiceTest {
     void registerSuccessfulRegistrationReturnsUserWithoutPasswordDTO() {
 
         UserRegisterDTO registerData = new UserRegisterDTO();
-        registerData.setEmail(Constant.EMAIL);
-        registerData.setPassword(Constant.PASS);
-        registerData.setConfirmPassword(Constant.PASS);
-        registerData.setFirstName(Constant.FIRST_NAME);
-        registerData.setLastName(Constant.LAST_NAME);
-        registerData.setRoleName(Constant.ROLE_NAME);
+        registerData.setEmail(Util.EMAIL);
+        registerData.setPassword(Util.PASS);
+        registerData.setConfirmPassword(Util.PASS);
+        registerData.setFirstName(Util.FIRST_NAME);
+        registerData.setLastName(Util.LAST_NAME);
+        registerData.setRoleName(Util.ROLE_NAME);
 
         User u = new User();
         u.setEmail(registerData.getEmail());
@@ -139,7 +134,7 @@ public class UserServiceTest {
 
         when(userRepository.existsByEmail(registerData.getEmail())).thenReturn(false);
         when(mapper.map(registerData, User.class)).thenReturn(u);
-        when(passwordEncoder.encode(registerData.getPassword())).thenReturn(Constant.PASS);
+        when(passwordEncoder.encode(registerData.getPassword())).thenReturn(Util.PASS);
         when(userRepository.save(any(User.class))).thenReturn(u);
         when(mapper.map(u, UserWithoutPasswordDTO.class)).thenReturn(expectedUser);
 
@@ -153,7 +148,7 @@ public class UserServiceTest {
     void registerPasswordMismatchThrowsBadRequestException() {
 
         UserRegisterDTO registerData = new UserRegisterDTO();
-        registerData.setPassword(Constant.PASS);
+        registerData.setPassword(Util.PASS);
         registerData.setConfirmPassword("mismatchedPassword");
 
         assertThrows(BadRequestException.class, () -> userService.register(registerData));
@@ -162,9 +157,9 @@ public class UserServiceTest {
     void registerEmailAlreadyExistsThrowsBadRequestException() {
 
         UserRegisterDTO registerData = new UserRegisterDTO();
-        registerData.setEmail(Constant.EMAIL);
-        registerData.setPassword(Constant.PASS);
-        registerData.setConfirmPassword(Constant.PASS);
+        registerData.setEmail(Util.EMAIL);
+        registerData.setPassword(Util.PASS);
+        registerData.setConfirmPassword(Util.PASS);
 
         when(userRepository.existsByEmail(registerData.getEmail())).thenReturn(true);
         assertThrows(BadRequestException.class, () -> userService.register(registerData));
@@ -215,18 +210,24 @@ public class UserServiceTest {
 
         EditProfilDTO editProfilDTO = new EditProfilDTO();
         editProfilDTO.setEmail(newEmail);
-        editProfilDTO.setFirstName(Constant.FIRST_NAME);
-        editProfilDTO.setLastName(Constant.LAST_NAME);
+        editProfilDTO.setFirstName(Util.FIRST_NAME);
+        editProfilDTO.setLastName(Util.LAST_NAME);
 
         User u = new User();
         u.setId(userId);
-        u.setEmail(Constant.EMAIL);
+        u.setEmail(Util.EMAIL);
+        u.setEnable(true);
 
         UserWithoutPasswordDTO expected = new UserWithoutPasswordDTO();
+        expected.setId(userId);
+        expected.setRole(editProfilDTO.getRole());
+        expected.setFirstName(editProfilDTO.getFirstName());
+        expected.setLastName(editProfilDTO.getLastName());
+        expected.setEmail(editProfilDTO.getEmail());
 
         when(userRepository.existsByEmail(newEmail)).thenReturn(false);
         when(userRepository.findById(userId)).thenReturn(Optional.of(u));
-        when(mapper.map(editProfilDTO, UserWithoutPasswordDTO.class)).thenReturn(expected);
+        when(mapper.map(u, UserWithoutPasswordDTO.class)).thenReturn(expected);
 
         UserWithoutPasswordDTO result = userService.editProfile(editProfilDTO, userId);
 
@@ -238,9 +239,9 @@ public class UserServiceTest {
     void editProfileEmailAlreadyExistsThrowsException2() {
         long userId = 1L;
         EditProfilDTO editProfileDTO = new EditProfilDTO();
-        editProfileDTO.setEmail(Constant.EMAIL);
-        editProfileDTO.setFirstName(Constant.FIRST_NAME);
-        editProfileDTO.setLastName(Constant.LAST_NAME);
+        editProfileDTO.setEmail(Util.EMAIL);
+        editProfileDTO.setFirstName(Util.FIRST_NAME);
+        editProfileDTO.setLastName(Util.LAST_NAME);
 
         User existingUser = new User();
         existingUser.setId(2L);
@@ -254,7 +255,7 @@ public class UserServiceTest {
     void deleteValidPasswordUserDeletedSuccessfully() {
 
     long userId = 1;
-    String password = Constant.PASS;
+    String password = Util.PASS;
 
     UserPasswordDTO userPasswordDTO = new UserPasswordDTO();
     userPasswordDTO.setPassword(password);
@@ -272,7 +273,7 @@ public class UserServiceTest {
     void deleteInvalidPasswordThrowsException() {
 
         long userId = 1;
-        String password = Constant.PASS;
+        String password = Util.PASS;
 
         UserPasswordDTO userPasswordDTO = new UserPasswordDTO();
         userPasswordDTO.setPassword(password);
@@ -291,7 +292,7 @@ public class UserServiceTest {
     void deleteUserNotFoundThrowsException() {
 
         long userId = 1;
-        String password = Constant.PASS;
+        String password = Util.PASS;
 
         UserPasswordDTO userPasswordDTO = new UserPasswordDTO();
         userPasswordDTO.setPassword(password);
@@ -303,9 +304,9 @@ public class UserServiceTest {
     void editProfileEmailAlreadyExistsThrowsException1() {
         long userId = 1L;
         EditProfilDTO editProfileDTO = new EditProfilDTO();
-        editProfileDTO.setEmail(Constant.EMAIL);
-        editProfileDTO.setFirstName(Constant.FIRST_NAME);
-        editProfileDTO.setLastName(Constant.LAST_NAME);
+        editProfileDTO.setEmail(Util.EMAIL);
+        editProfileDTO.setFirstName(Util.FIRST_NAME);
+        editProfileDTO.setLastName(Util.LAST_NAME);
 
         User existingUser = new User();
         existingUser.setId(2L);

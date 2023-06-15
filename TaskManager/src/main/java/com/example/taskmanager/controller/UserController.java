@@ -16,8 +16,8 @@ import org.springframework.web.bind.annotation.*;
     @PostMapping("/users/login")
     public UserWithoutPasswordDTO login(@Valid @RequestBody final LoginDTO loginDTO, final HttpSession session){
         UserWithoutPasswordDTO user=userService.login(loginDTO);
-        session.setAttribute(Constant.LOGGED,true);
-        session.setAttribute(Constant.LOGGED_ID,user.getId());
+        session.setAttribute(Util.LOGGED,true);
+        session.setAttribute(Util.LOGGED_ID,user.getId());
         return user;
     }
     @PostMapping("/users/register")
@@ -39,11 +39,11 @@ import org.springframework.web.bind.annotation.*;
     @PutMapping("/users/edit")
     public UserWithoutPasswordDTO editProfile(@Valid @RequestBody final EditProfilDTO editProfilDTO,final  HttpSession session){
 
-        final long id=(int) session.getAttribute(Constant.LOGGED_ID);
+        final long id=(Long) session.getAttribute(Util.LOGGED_ID);
         return userService.editProfile(editProfilDTO,id);
     }
 
-    @DeleteMapping("/users/{id}/delete")
+    @DeleteMapping("/users")
     public ResponseEntity<String> delete(@RequestBody final UserPasswordDTO userPasswordDTO, final HttpSession session){
         final long userId=loggedId(session);
         userService.delete(userPasswordDTO,userId);

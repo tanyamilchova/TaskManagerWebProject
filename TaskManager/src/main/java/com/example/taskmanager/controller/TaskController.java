@@ -6,11 +6,12 @@ import com.example.taskmanager.model.DTOs.TaskInfoDTO;
 import com.example.taskmanager.service.TaskService;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.io.File;
-import java.util.List;
+
 import org.springframework.core.io.Resource;
 
     @RestController
@@ -34,16 +35,17 @@ import org.springframework.core.io.Resource;
         final long userId=loggedId(session);
         return taskService.getTaskById(id,userId);
     }
-    @DeleteMapping("/tasks/{id}/delete")
+    @DeleteMapping("/tasks/{id}")
     public TaskInfoDTO delete(@PathVariable final long id,final HttpSession session){
         final long userId=loggedId(session);
         return  taskService.delete(id,userId);
     }
     @PostMapping("tasks/unfinished")
-    public List<TaskInfoDTO> filter( final HttpSession session){
+    public Page<TaskInfoDTO> filter( @RequestParam (defaultValue = "0") final int page,
+                                     @RequestParam (defaultValue = "10") final int size,final HttpSession session){
         final long userId=loggedId(session);
-        List<TaskInfoDTO>taskInfoDTOList=taskService.filterUnfinishdTasks(userId);
-        return taskInfoDTOList;
+//        List<TaskInfoDTO>taskInfoDTOList=taskService.filterUnfinishdTasks(userId);
+        return taskService.filterUnfinishdTasks(userId,page,size);
     }
     @GetMapping("/users/tasks/csv")
     public ResponseEntity<Resource> getUnfinishedTasksCsv(final HttpSession session) {
@@ -55,7 +57,7 @@ import org.springframework.core.io.Resource;
         headers.add("Content-Type", "text/csv");
         headers.add("Content-Disposition", "attachment; filename=" + csvFile.getName());
 
-        Resource resource=Util.getResaurce(csvFile );
+        Resource resource=Util.getResource(csvFile );
         return ResponseEntity.ok()
                 .headers(headers)
                 .contentLength(csvFile.length())
